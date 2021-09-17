@@ -18,6 +18,7 @@ import org.altbeacon.beacon.Beacon;
 import org.altbeacon.beacon.BeaconManager;
 import org.altbeacon.beacon.BeaconParser;
 import org.altbeacon.beacon.MonitorNotifier;
+import org.altbeacon.beacon.RangeNotifier;
 import org.altbeacon.beacon.Region;
 //import Jama.*;
 import java.io.BufferedReader;
@@ -30,12 +31,16 @@ import java.io.InputStreamReader;
 import java.sql.SQLOutput;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
+import java.util.Set;
+
 public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
-    private static final String TAG = "MonitoringActivity";
+    protected static final String TAG = "RangingActivity";
     private BeaconManager beaconManager;
 
     String file=new String("f1:a6:a4:76:14:a5,6.855355418,52.23945261,5," +
@@ -212,9 +217,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
-
-        System.out.println("nothig");
         position();
         readFromCsv();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -234,32 +236,42 @@ public class MainActivity extends AppCompatActivity {
             }
     }
         beaconManager = BeaconManager.getInstanceForApplication(this);
-        TextView tv=findViewById(R.id.textID);
-        tv.setText("code ran up to here");
+        // To detect proprietary beacons, you must add a line like below corresponding to your beacon
+        // type.  Do a web search for "setBeaconLayout" to get the proper expression.
         beaconManager.getBeaconParsers().add(new BeaconParser().
                 setBeaconLayout("m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24"));
-        beaconManager.addMonitorNotifier(new MonitorNotifier() {
+        beaconManager.addRangeNotifier(new RangeNotifier() {
+
+            Set data= new HashSet();
+            List adapter = new ArrayList();
             @Override
-            public void didEnterRegion(Region region) {
-                Log.i(TAG, "I just saw a beacon for the first time!");
+            public void didRangeBeaconsInRegion(Collection<Beacon> beacons, Region region) {
+                System.out.println("It goes into didRangeBeaconsInRegion");
+                if (beacons.size() > 0) {
+
+                    System.out.println("beacon size is " + beacons.size());
+                    data.clear();
+                    for (Beacon beacon : beacons) {
+                        data.add("MAC: "+ beacon.getBluetoothAddress()
+                                + "\nDISTANCE: " + beacon.getDistance() + "\n");
+                    }
+                    updateList();
+                }
 
             }
+            public void updateList(){
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        adapter.clear();
+                        adapter.add(data);
+                        System.out.println(data);
+                        System.out.println("Something happened in run");
 
-            @Override
-            public void didExitRegion(Region region) {
-                Log.i(TAG, "I no longer see a beacon");
-            }
+                    }
+                });}
 
-            @Override
-            public void didDetermineStateForRegion(int state, Region region) {
-                Log.i(TAG, "I have just switched from seeing/not seeing beacons: "+state);
-                System.out.println("I detected x beacons so far: ,");
-                System.out.println(beaconManager.getBeaconParsers().size());
-
-            }
         });
-
-        beaconManager.startMonitoring(new Region("myMonitoringUniqueId", null, null, null));
     }
 
 
@@ -294,16 +306,11 @@ public class MainActivity extends AppCompatActivity {
                     builder.setTitle("Functionality limited");
                     builder.setMessage("Since location access has not been granted, this app will not be able to discover beacons when in the background.");
                     builder.setPositiveButton(android.R.string.ok, null);
-                    builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-
-                        @Override
-                        public void onDismiss(DialogInterface dialog) {
-                        }
-
+                    builder.setOnDismissListener(dialog -> {
                     });
                     builder.show();
                 }
-                return;
+
             }
 
 
