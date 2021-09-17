@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
@@ -266,8 +267,18 @@ public class MainActivity extends AppCompatActivity {
                     System.out.println("beacon size is " + beacons.size());
                     data.clear();
                     for (Beacon beacon : beacons) {
+                        String MAC= beacon.getBluetoothAddress().toLowerCase(Locale.ROOT);
                         data.add("MAC: "+ beacon.getBluetoothAddress()
                                 + "\nDISTANCE: " + beacon.getDistance() + "\n");
+                        ArrayList <Float> map_val=locationOfBeacon.get(MAC);
+                        System.out.println(MAC);
+                        if (locationOfBeacon.containsKey(MAC)){
+                            if (map_val.size()==3)
+                                map_val.add((float) beacon.getDistance());
+                            else map_val.set(3,(float) beacon.getDistance());}
+                        else System.out.println("Found a beacon that's not in the list");
+
+
                     }
                     updateList();
                 }
